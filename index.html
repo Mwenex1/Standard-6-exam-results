@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exam Results Checker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            flex-direction: column;
+        }
+        .container {
+            background-color: #fff;
+            padding: 20px 40px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            max-width: 600px;
+            width: 90%;
+        }
+        h1 {
+            color: #333;
+        }
+        .input-group {
+            margin-top: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #555;
+        }
+        input[type="text"] {
+            width: 200px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-left: 10px;
+            transition: background-color 0.3s ease;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #results-container {
+            margin-top: 20px;
+            text-align: left;
+            border-top: 1px solid #eee;
+            padding-top: 20px;
+        }
+        .student-info h2 {
+            text-align: center;
+            border-bottom: 2px solid #ccc;
+            padding-bottom: 10px;
+        }
+        .student-info p {
+            margin: 5px 0;
+        }
+        .error {
+            color: #dc3545;
+            font-weight: bold;
+            text-align: center;
+        }
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        .results-table th, .results-table td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+        .results-table th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+        .pass {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .fail {
+            color: #dc3545;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Exam Results Checker</h1>
+        <p>Please enter your secret code to view your results.</p>
+        <div class="input-group">
+            <label for="secret-code">Secret Code:</label>
+            <input type="text" id="secret-code" placeholder="e.g., S-101">
+            <button onclick="checkResults()">Check Results</button>
+        </div>
+        <div id="results-container">
+            </div>
+    </div>
+
+    <script>
+        let studentsData = null; // A variable to hold the fetched data
+
+        // Function to fetch the data from the JSON file
+        async function fetchResultsData() {
+            try {
+                const response = await fetch('results.json');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+                
+                // Convert the array into a more convenient object with secret_code as the key
+                const studentsObject = data.reduce((acc, student) => {
+                    acc[student.secret_code] = student;
+                    return acc;
+                }, {});
+
+                studentsData = studentsObject;
+            } catch (e) {
+                console.error("Could not fetch results data:", e);
+                const resultsContainer = document.getElementById('results-container');
+                resultsContainer.innerHTML = `<p class="error">Error loading results. Please try again later.</p>`;
+            }
+        }
+
+        // Call the function to load the data when the page loads
+        fetchResultsData();
+
+        function checkResults() {
+            const secretCode = document.getElementById('secret-code').value.trim();
+            const resultsContainer = document.getElementById('results-container');
+            
+            resultsContainer.innerHTML = '';
+
+            // Check if the data has been loaded and if the secret code exists
+            if (studentsData && studentsData[secretCode]) {
+                const student = studentsData[secretCode];
+                let resultsHTML = `<div class="student-info"><h2>Results for ${student.name}</h2>`;
+                
+                resultsHTML += `<table class="results-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Subject</th>
+                                            <th>Score</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>`;
+                
+                // Iterate through the student's data to display results for each subject
+                for (const key in student) {
+                    // Skip keys that are not subjects (e.g., secret_code, name)
+                    if (key !== 'secret_code' && key !== 'name') {
+                        const score = student[key];
+                        const status = (score >= 50) ? 'Pass' : 'Fail'; // Assuming a passing score is 50
+                        const statusClass = status.toLowerCase();
+
+                        resultsHTML += `<tr>
+                                            <td>${key}</td>
+                                            <td>${score}%</td>
+                                            <td class="${statusClass}">${status}</td>
+                                        </tr>`;
+                    }
+                }
+                
+                resultsHTML += `</tbody></table></div>`;
+                
+                resultsContainer.innerHTML = resultsHTML;
+            } else {
+                const errorHTML = `<p class="error">Invalid secret code. Please try again.</p>`;
+                resultsContainer.innerHTML = errorHTML;
+            }
+        }
+    </script>
+
+</body>
+</html>
